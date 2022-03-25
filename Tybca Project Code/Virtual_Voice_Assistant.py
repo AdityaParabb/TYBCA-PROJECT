@@ -1,4 +1,6 @@
 from PyQt5 import QtWidgets, QtGui,QtCore
+import PyQt5
+from PyQt5.QtCore import QTimer,QTime
 from PyQt5.QtGui import QMovie
 import sys
 from PyQt5.QtWidgets import *
@@ -16,6 +18,11 @@ import wikipedia
 import psutil
 import pyautogui
 import operator
+import urllib.request
+import cv2
+import numpy as np
+import pyaudio
+from requests import get
 
 
 flags = QtCore.Qt.WindowFlags(QtCore.Qt.FramelessWindowHint)
@@ -23,7 +30,7 @@ flags = QtCore.Qt.WindowFlags(QtCore.Qt.FramelessWindowHint)
 engine = pyttsx3.init('sapi5')
 voices = engine.getProperty('voices')
 engine.setProperty('voice',voices[2].id)
-engine.setProperty('rate',180)
+engine.setProperty('rate',200)
 
 def speak(audio):
     engine.say(audio)
@@ -60,7 +67,7 @@ class mainT(QThread):
 
     def STT(self):
         R= sr.Recognizer()
-        with sr.Microphone(device_index=0) as source:
+        with sr.Microphone(device_index=1) as source:
             print("Listning...........")
             audio = R.listen(source)
         try:
@@ -89,8 +96,8 @@ class mainT(QThread):
                 webbrowser.open_new_tab("www.youtube.com")
                 speak("Yotube is open now")
 
-            elif 'play music' in self.query:
-                speak("playing music from pc")
+            elif 'play a song' in self.query:
+                speak("playing a song from pc")
                 self.music_dir ="C:\music"
                 self.musics = os.listdir(self.music_dir)
                 os.startfile(os.path.join(self.music_dir,self.musics[0]))
@@ -127,29 +134,7 @@ class mainT(QThread):
                 speak("According to Wikipedia")
                 speak(results)
 
-            elif 'do some calculations' in self.query or 'can you calculate' in self.query:
-                speak("why Not")    
-                R= sr.Recognizer()
-                with sr.Microphone() as source:
-                    speak("say what you want to calculate,example: 3 plus 3")
-                    print("listening........")
-                    audio=R.listen(source)
-                    my_string=R.recognize_google(audio)  
-                    print(my_string)
-                def get_operator_fn(op):
-                    return{
-                        '+': operator.add,
-                        '-': operator.sub,
-                        'x': operator.mul,
-                        'divided':operator.__truediv__,
-                         }[op]
-                def eval_binary_expr(op1,oper,op2):
-                    op1,op2=int(op1),int(op2)
-                    return get_operator_fn(oper)(op1,op2)
-                speak("your result is")
-                speak(eval_binary_expr(*(my_string.split()))) 
-                           
-
+                        
             elif 'who are you' in self.query or 'what can you do' in self.query:
                     speak('I am Diana 1.0 , I am your personal assistant , I am programmed to manage your tasks like opening aplications, searching content and solve simple mathematics etcetra')
 
@@ -163,7 +148,7 @@ class mainT(QThread):
                 speak('Here are some wheather reports from accuweather.com')
 
   
-            elif 'covid ' in self.query:
+            elif 'covid ' in self.query or 'corona 'in self.query:
                 news = webbrowser.open_new_tab("https://www.worldometers.info/coronavirus/")
                 speak('Here are the latest covid-19 numbers')
                 time.sleep(6)
@@ -194,7 +179,31 @@ class mainT(QThread):
                     webbrowser.open_new_tab("primevideo.com") 
                     speak("Amazon Prime Video open now")
 
-            # Aditya Parab Special Add On Commands :-
+
+            # Aditya Parab Special Add On Cammands :-
+
+            elif 'do some calculations' in self.query or 'can you calculate' in self.query:
+                speak("why Not")    
+                R= sr.Recognizer()
+                with sr.Microphone() as source:
+                    speak("say what you want to calculate,example: 3 plus 3 ,3 multiply by 3")
+                    print("listening........")
+                    audio=R.listen(source)
+                    my_string=R.recognize_google(audio)  
+                    print(my_string)
+                def get_operator_fn(op):
+                    return{
+                        '+': operator.add,
+                        '-': operator.sub,
+                        'x': operator.mul,
+                        'divided':operator.__truediv__,
+                         }[op]
+                def eval_binary_expr(op1,oper,op2):
+                    op1,op2=int(op1),int(op2)
+                    return get_operator_fn(oper)(op1,op2)
+                speak("your result is")
+                speak(eval_binary_expr(*(my_string.split())))
+
 
             elif 'stock market' in self.query:
                     webbrowser.open_new_tab("https://www.moneycontrol.com/stocksmarketsindia/") 
@@ -216,7 +225,7 @@ class mainT(QThread):
                 speak('fliping a coin')
 
 
-            elif 'find my location' in self.query:
+            elif 'find my location' in self.query or 'locate me' in self.query:
                 news = webbrowser.open_new_tab("https://www.google.com/maps/@")
                 speak('finding your location')
 
@@ -224,15 +233,18 @@ class mainT(QThread):
             elif 'open instagram ' in self.query:
                 news = webbrowser.open_new_tab("https://www.instagram.com/")
                 speak('instagram is open now ') 
+                
            
             elif 'open facebook ' in self.query:
                 news = webbrowser.open_new_tab("https://www.facebook.com/")
                 speak('facebook is open now ')
 
+
             elif 'how much power left' in self.query or 'how much power we have' in self.query:
                 battery =psutil.sensors_battery()
                 persentage= battery.percent
                 speak(f'sir we have {persentage} percent battery')
+
 
                 if persentage>=75:
                     speak('we have enough powerto continue our work')
@@ -250,34 +262,98 @@ class mainT(QThread):
                      speak('we have very low power, plz connect to charing the system will shutdown very soon')  
                      
 
-            elif "volume up" in self.query:
+            elif "volume up" in self.query or "increase the volume" in self.query:
                 pyautogui.press('volumeup')
                 speak('volume is increased now')
 
 
-            elif "volume down" in self.query:
+            elif "volume down" in self.query or "decrease the volume" in self.query:
                 pyautogui.press('volumedown')
                 speak('volume is decreased now')
 
 
-            elif "volume mute" in self.query:
+            elif "volume mute" in self.query or "mute the volume" in self.query:
                 pyautogui.press('volumemute')
                 speak('volume is muted now')
 
+
             elif "take screenshot" in self.query or "take a screenshot"in self.query:
-                speak("sir, please tell me the nanme for this screenshot file")
+                speak("please tell me the name for this screenshot file")
                 name = self.STT().lower()
-                speak("please sir hold the screen for few seconds,iam taking screenshot")
+                speak("please hold the screen for few seconds,i am taking screenshot")
                 time.sleep(3)
                 img= pyautogui.screenshot()
                 img.save(f"{name}.png")
-                speak("i am done sir , the screenshot is saved in our main folder.now iam ready for your next cammand")
+                speak("your screenshot has been saved , i am ready for next command")
 
 
+            elif "open mobile camera" in self.query or "access mobile camera" in self.query:
+                 speak("Your mobiles camera is open now")
+                 URL ="http://192.168.87.219:8080/shot.jpg"
+                 while True:
+                    img_arr = np.array(bytearray(urllib.request.urlopen(URL).read()),dtype=np.uint8)
+                    img=cv2.imdecode(img_arr,-1)
+                    cv2.imshow('IPWebcam',img)
+                    q = cv2.waitKey(1)
+                    if q == ord("q"):
+                        break;
 
+                    
+                 cv2.destroyAllWindows()
+
+
+            elif "open camera" in self.query:
+                 speak(" camera is open now")
+                 cap=cv2.VideoCapture(0)
+                 while True:
+                    ret,img=cap.read()
+                    cv2.imshow('webcam',img)
+                    k = cv2.waitKey(50)
+                    if k ==27:
+                        break;
+
+                 cap.release()   
+                 cv2.destroyAllWindows()
+
+
+            elif "switch the window" in self.query or "go to another window" in self.query:
+                speak("switching to another tab")
+                pyautogui.keyDown("alt") 
+                pyautogui.press("tab")
+                time.sleep(1)
+                pyautogui.keyUp("alt") 
 
             
            
+            elif "shut down the system" in self.query:
+                os.system("shutdown /s ")  
+
+
+            elif " restart the system" in self.query:
+                os.system("shutdown /r ") 
+
+
+            elif "open notepad" in self.query:
+                speak ("notepad is open now")
+                os.system(" start notepad")
+
+
+            elif "open command prompt" in self.query:
+                speak ("command prompt is open now")
+                os.system(" start cmd")
+
+
+            elif "search my ip address" in self.query or "Ip address" in self.query:
+                speak("searching")
+                ip=get('https://api.ipify.org').text
+                speak (f"your ip address is {ip}")
+
+
+            elif "open github " in self.query or "github " in self.query:
+                news = webbrowser.open_new_tab("https://github.com/")
+                speak ("git hub is open now ")                      
+               
+
 FROM_MAIN,_ = loadUiType(os.path.join(os.path.dirname(__file__),"./scifi.ui"))
 
 class Main(QMainWindow,FROM_MAIN):
@@ -305,14 +381,12 @@ class Main(QMainWindow,FROM_MAIN):
         self.label_5.setText("<font size=8 color='white'>"+self.ts+"</font>")
         self.label_5.setFont(QFont(QFont('Acens',8)))
         
-        self.ts = time.strftime("%H : %M %p")
+        self.ts = time.strftime("%H : %M :%S %p")
 
         Dspeak.start()
         self.label.setPixmap(QPixmap("./lib/tuse.png"))
         self.label_6.setText("<font size=8 color='white'>"+self.ts+"</font>")
         self.label_6.setFont(QFont(QFont('Acens',8)))
-
-        self.ts = time.strftime("%H : %M")
 
 
 app = QtWidgets.QApplication(sys.argv)
